@@ -1,0 +1,49 @@
+# Publishes the install entry points on https://bsd.arifcinartekin.me
+#
+#   /install     bsdopen-setup.sh
+#   /uninstall   mac/bsduninstall.sh
+#   /            site/index.html
+#
+# The setup still fetches its companion files from raw.githubusercontent.com
+# (BSDOPEN_REPO / BSDOPEN_REF), so this site only has to serve the entry points.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - bsdopen-setup.sh
+      - mac/bsduninstall.sh
+      - site/**
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the site
+        run: |
+          mkdir -p _site
+          cp site/index.html _site/index.html
+          cp bsdopen-setup.sh _site/install
+          cp mac/bsduninstall.sh _site/uninstall
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
