@@ -39,6 +39,7 @@
 #   BSDOPEN_SSH_PORT=2223
 #   BSDOPEN_GELI_PASSPHRASE=...  Disk passphrase (otherwise asked for; needed with BSDOPEN_YES=1 without a terminal)
 #   BSDOPEN_REPO=owner/name  BSDOPEN_REF=main   Where companion files are fetched from
+#   BSDOPEN_MIRROR_URL=...   Where the FreeBSD release files are fetched from first (default: this repo's GitHub release)
 #
 # For testing (non-macOS / no HVF): BSDOPEN_ALLOW_NON_MAC=1 BSDOPEN_ACCEL=tcg
 #   BSDOPEN_CPU=cortex-a72 BSDOPEN_FW_CODE=... BSDOPEN_FW_VARS=...
@@ -52,17 +53,23 @@ BSDOPEN_REPO="${BSDOPEN_REPO:-arifcinartekin/bsdsetupformac}"
 BSDOPEN_REF="${BSDOPEN_REF:-main}"
 RAW_BASE="https://raw.githubusercontent.com/${BSDOPEN_REPO}/${BSDOPEN_REF}"
 
-# FreeBSD keeps release files at fixed, versioned URLs: no mirror of our own is
-# needed. Once a release reaches end of life it moves to ftp-archive (http
-# only there; the pinned sha256 is what is trusted, not the transport).
+# The release files are mirrored unchanged as a GitHub release of this repo and
+# fetched from there first; FreeBSD's own servers are the fallback (once a
+# release reaches end of life it moves to ftp-archive, http only there). The
+# pinned sha256 is what is trusted, not the transport.
 FREEBSD_RELEASE="15.1-RELEASE"
 FREEBSD_ISO="FreeBSD-${FREEBSD_RELEASE}-arm64-aarch64-bootonly.iso"
 FREEBSD_ISO_SHA256="359136c2af73e03da6f15ad59f0c67bc561ca8b69631d78bfb8f2225e2c9a5ef"
 FREEBSD_ISO_XZ_SHA256="33e2dc303b5dce5a374727ba12c41c303db70fe0676e76333e09e0ea8cb2fbd0"
 FREEBSD_CHECKSUM_FILE="CHECKSUM.SHA256-FreeBSD-${FREEBSD_RELEASE}-arm64-aarch64"
-FREEBSD_ISO_URLS="https://download.freebsd.org/releases/arm64/aarch64/ISO-IMAGES/${FREEBSD_RELEASE%-RELEASE}
+FREEBSD_RELEASE_TAG="freebsd-${FREEBSD_RELEASE}"
+FREEBSD_MIRROR_URL="${BSDOPEN_MIRROR_URL:-https://github.com/${BSDOPEN_REPO}/releases/download/${FREEBSD_RELEASE_TAG}}"
+FREEBSD_UPSTREAM_ISO_URLS="https://download.freebsd.org/releases/arm64/aarch64/ISO-IMAGES/${FREEBSD_RELEASE%-RELEASE}
 http://ftp-archive.freebsd.org/pub/FreeBSD-Archive/old-releases/arm64/aarch64/ISO-IMAGES/${FREEBSD_RELEASE%-RELEASE}"
-FREEBSD_DIST_URLS="https://download.freebsd.org/releases/arm64/aarch64/${FREEBSD_RELEASE}
+FREEBSD_ISO_URLS="${FREEBSD_MIRROR_URL}
+${FREEBSD_UPSTREAM_ISO_URLS}"
+FREEBSD_DIST_URLS="${FREEBSD_MIRROR_URL}
+https://download.freebsd.org/releases/arm64/aarch64/${FREEBSD_RELEASE}
 http://ftp-archive.freebsd.org/pub/FreeBSD-Archive/old-releases/arm64/aarch64/${FREEBSD_RELEASE}"
 # From the release's MANIFEST (the ISO carries the same MANIFEST; the guest checks both)
 BASE_TXZ_SHA256="5b7a46a0abfbe23a1d4454b5600e2efcfce16b705bc7e9c851c37470c035ef98"
@@ -425,7 +432,7 @@ get_freebsd_iso() {
   # The ISO must be the release's: the pin, and FreeBSD's published list as a second source
   # shellcheck disable=SC2086
   if [ ! -s "$sums" ]; then
-    for base in $FREEBSD_ISO_URLS; do
+    for base in $FREEBSD_UPSTREAM_ISO_URLS $FREEBSD_MIRROR_URL; do
       fetch "$base/$FREEBSD_CHECKSUM_FILE" "$sums" 2>/dev/null && break
       rm -f "$sums"
     done

@@ -184,16 +184,21 @@ BSDOPEN_MEM=8G BSDOPEN_DISK_SIZE=64G bash <(curl -fsSL https://bsd.arifcinarteki
 
 | | Source | Checks |
 |---|---|---|
-| FreeBSD `15.1-RELEASE` bootonly ISO (installer) | `download.freebsd.org`, then `ftp-archive.freebsd.org` once 15.1 is end of life | sha256 of the `.iso.xz` and of the `.iso` pinned in the script + FreeBSD's published `CHECKSUM.SHA256` |
+| FreeBSD `15.1-RELEASE` bootonly ISO (installer) | [GitHub release `freebsd-15.1-RELEASE`](https://github.com/arifcinartekin/bsdsetupformac/releases/tag/freebsd-15.1-RELEASE) of this repo, then `download.freebsd.org`, then `ftp-archive.freebsd.org` | sha256 of the `.iso.xz` and of the `.iso` pinned in the script + FreeBSD's published `CHECKSUM.SHA256` |
 | `base.txz`, `kernel.txz` | same | sha256 pinned in the script; inside the installer they are checked again against the `MANIFEST` on the verified ISO |
 | Packages (`pkg`) | `pkg.FreeBSD.org` | pkg verifies the repository signature with the keys that ship in base |
 | Companion scripts | this repo | fetched from the same repo and ref as the setup script |
 
-FreeBSD keeps release files at fixed, versioned URLs, so unlike Arch Linux ARM's moving "latest" tarball there is nothing to mirror. The archive is plain http; that is fine, the pinned sha256 is what is trusted.
+The ISO, the checksum list and the two distribution sets are mirrored unchanged as a GitHub release of this repo, so an install does not depend on FreeBSD's servers or on 15.1 moving to the archive. The checksum list is still fetched from FreeBSD first, so it stays an independent second source. Any mirror can serve the files (the archive is plain http): the pinned sha256 is what is trusted, not the transport.
 
 ### Updating to a new FreeBSD release (maintainers)
 
-Change `FREEBSD_RELEASE` and the four checksums in `bsdopen-setup.sh`: `FREEBSD_ISO_SHA256` and `FREEBSD_ISO_XZ_SHA256` from the release's `CHECKSUM.SHA256-FreeBSD-<release>-arm64-aarch64`, `BASE_TXZ_SHA256` and `KERNEL_TXZ_SHA256` from `https://download.freebsd.org/releases/arm64/aarch64/<release>/MANIFEST`. Check the release announcement's signed checksums against them.
+Change `FREEBSD_RELEASE` and the four checksums in `bsdopen-setup.sh`: `FREEBSD_ISO_SHA256` and `FREEBSD_ISO_XZ_SHA256` from the release's `CHECKSUM.SHA256-FreeBSD-<release>-arm64-aarch64`, `BASE_TXZ_SHA256` and `KERNEL_TXZ_SHA256` from `https://download.freebsd.org/releases/arm64/aarch64/<release>/MANIFEST`. Check the release announcement's signed checksums against them. Then publish the mirror:
+
+```bash
+gh release create freebsd-<release> --title "FreeBSD <release> arm64" \
+  FreeBSD-<release>-arm64-aarch64-bootonly.iso.xz CHECKSUM.SHA256-FreeBSD-<release>-arm64-aarch64 base.txz kernel.txz
+```
 
 ---
 
